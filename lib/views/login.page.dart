@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/services.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -11,8 +16,79 @@ class LoginPage extends StatelessWidget {
   }
 }
 
-class BackgroundPage extends StatelessWidget {
+class BackgroundPage extends StatefulWidget {
   const BackgroundPage({super.key});
+
+  @override
+  _BackgroundPageState createState() => _BackgroundPageState();
+}
+
+class _BackgroundPageState extends State<BackgroundPage> {
+  final TextEditingController _cpfController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  String? _errorMessage;
+
+  // Crie um formatador para o cpf
+  final MaskTextInputFormatter _cpfFormatter = MaskTextInputFormatter(
+    mask: '###.###.###-##', // Máscara para CPF
+    filter: {
+      "#": RegExp(r'[0-9]'),
+    },
+  );
+
+  Future<void> _login() async {
+    try {
+      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+        email: _cpfController.text,
+        password: _passwordController.text,
+      );
+
+      // Buscar dados do usuário na coleção 'usuarios'
+      DocumentSnapshot userDoc = await _firestore
+          .collection('usuarios')
+          .doc(userCredential.user!.uid)
+          .get();
+
+      if (userDoc.exists) {
+        Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
+
+        // Armazenar a sessão do usuário no local storage
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        Map<String, dynamic> user = {
+          'id': userCredential.user!.uid,
+          'name': userData['name'],
+          'email': userData['email'],
+          'admin': userData['admin'],
+        };
+        await prefs.setString('user', user.toString());
+
+        Navigator.pushReplacementNamed(context, '/portal');
+      } else {
+        setState(() {
+          _errorMessage = 'Usuário não encontrado.';
+        });
+        _showErrorMessage();
+      }
+    } on FirebaseAuthException catch (err) {
+      setState(() {
+        _errorMessage = 'Login/Email incorretos. Tente novamente.';
+      });
+      _showErrorMessage();
+    }
+  }
+
+  void _showErrorMessage() {
+    if (_errorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_errorMessage!),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -70,24 +146,15 @@ class BackgroundPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 20),
-                TextField(
-                  decoration: InputDecoration(
-                    labelText: 'CPF',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Senha',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
+                _buildTextField('CPF',
+                    controller: _cpfController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [_cpfFormatter],
+                    hintText: 'XXX.XXX.XXX-XX'),
+                _buildTextField('Senha',
+                    controller: _passwordController,
+                    obscureText: true,
+                    hintText: 'Senha'),
                 const SizedBox(height: 10),
                 TextButton(
                   onPressed: () {
@@ -104,9 +171,7 @@ class BackgroundPage extends StatelessWidget {
                   child: ElevatedButton(
                     style:
                         ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                    onPressed: () {
-                      Navigator.pushReplacementNamed(context, '/portal');
-                    },
+                    onPressed: _login,
                     child: const Text(
                       'Acessar conta',
                       style: TextStyle(color: Colors.white),
@@ -127,6 +192,36 @@ class BackgroundPage extends StatelessWidget {
             ),
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildTextField(String label,
+      {bool obscureText = false,
+      TextInputType keyboardType = TextInputType.text,
+      required TextEditingController controller,
+      List<TextInputFormatter>? inputFormatters,
+      String? hintText,
+      String? labelText}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 16)),
+        const SizedBox(height: 5), // Espaço entre label e campo de texto
+        TextField(
+          controller: controller,
+          obscureText: obscureText,
+          keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
+          decoration: InputDecoration(
+            labelText: labelText, // Usando labelText aqui
+            hintText: hintText, // Usando hintText aqui
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10), // Espaço entre campos
       ],
     );
   }
