@@ -1,16 +1,17 @@
-# ajudarp_flutter
+# AjudaRP (Flutter)
 
-A new Flutter project.
+Aplicativo para que cidadãos solicitem serviços prestados por órgãos públicos da cidade de forma mais prática e ágil. Projeto desenvolvido como Trabalho de Conclusão de Curso (TCC) em Análise e Desenvolvimento de Sistemas (Fatec).
 
-## Getting Started
+Versão web do projeto: [ajudarp_web](https://github.com/EnzzoZ1/ajudarp_web) · [demo](https://capable-maamoul-532213.netlify.app/)
 
-This project is a starting point for a Flutter application.
+## Stack
 
-A few resources to get you started if this is your first Flutter project:
+- **Flutter / Dart** (Android, iOS, Web, Desktop)
+- **Firebase**: Firestore, Storage e Hosting
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## Como executar
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```bash
+flutter pub get
+flutter run
+```
